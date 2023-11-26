@@ -1,0 +1,21 @@
+{
+	"compilerOptions": {
+		"target": "ES2020",
+		"module": "CommonJS",
+		"lib": ["ESNext"],
+		"allowJs": true,
+		"outDir": "dist/",
+		"rootDir": ".",
+		"removeComments": true,
+		"strict": true,
+		"noImplicitAny": true,
+		"moduleResolution": "Node",
+		"esModuleInterop": true,
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+		"useUnknownInCatchVariables": false,
+		"skipLibCheck": true,
+		"forceConsistentCasingInFileNames": true
+	},
+	"include": ["src/**/*", "src/api/helpers", "src/types.ts"]
+}

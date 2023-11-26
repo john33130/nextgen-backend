@@ -1,0 +1,9 @@
+# directories
+node_modules/
+logs/
+dist/
+
+# files
+*.env
+*.log
+config.yaml
