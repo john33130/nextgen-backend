@@ -9,6 +9,8 @@ import rateLimit from 'express-rate-limit';
 import logger from './lib/logger';
 import { path } from './lib/fs';
 import config from './lib/config';
+import pkg from './lib/pkg';
+import github from './lib/github';
 
 const app = express();
 
@@ -34,6 +36,8 @@ export default async () => {
 		})
 	);
 
+	app.set('x-powered-by', 'Bloed, zweet en tranen.'); // set x-powered-by
+
 	// import routes
 	readdirSync(path('./routes'))
 		.filter((file) => file.endsWith('.ts') || file.endsWith('.js'))
@@ -42,7 +46,25 @@ export default async () => {
 			app.use(route, (await import(`./routes/${filename}`)).default);
 		});
 
-	app.get('/', (req, res) => res.json({ ip: req.socket.remoteAddress }));
+	// set root data
+	app.get('/', async (req, res) => {
+		const gh = await github();
+		res.status(200).json({
+			api: {
+				host: req.get('host'),
+				environment: process.env.NODE_ENV!,
+				build: `v${pkg.version!}`,
+				deployed: gh.commit.author.data,
+				commit: gh.sha,
+				uptime: Math.floor(process.uptime()),
+			},
+			about: {
+				description:
+					'This REST API is used to authenticate users and get information for the frontend',
+			},
+			resources: ['/auth', '/users', '/devices'],
+		});
+	});
 
 	const server = http.createServer(app);
 

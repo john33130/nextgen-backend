@@ -65,3 +65,14 @@ export type LogData = TransformableInfo & Partial<LoggerMetaData & CustomLogMeth
 export type SafeUser = Omit<User, 'password'>;
 
 export type SafeDevice = Omit<Device, 'accessKey' | 'data'>;
+
+export interface BaseUserBody {
+	name: string;
+	email: string;
+}
+
+export interface SignupUserBody extends BaseUserBody {
+	password: string;
+}
+
+export type LoginUserBody = BaseUserBody;

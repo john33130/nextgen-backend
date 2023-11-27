@@ -1,12 +1,13 @@
 import { Router } from 'express';
+import * as auth from '../middlewares/auth.middleware';
 
 const router = Router();
 
-router.get('/:deviceId'); // data fo  r owner
-router.patch('/:deviceId'); // change data (no measurements)
-router.post('/:deviceId/pair'); // set device in pair-modus
-router.get('/data'); // public data from all devices
-router.get('/data/:deviceId'); // public data from 1 device
-router.post('/data/:deviceId'); // add measurements to a device
+router.get('/', auth.validateToken); // get all device information at once (only admins)
+router.get('/measurements'); // get all device measurements at once (public)
+router.get('/:deviceId', auth.validateToken); // get device information (only users and admins)
+router.patch('/:deviceId', auth.validateToken); // change device information (only users and admins)
+router.get('/:deviceId/measurements'); // get device measurements (public)
+router.post('/:deviceId/measurements'); // change device measurements (devices only)
 
 export default router;

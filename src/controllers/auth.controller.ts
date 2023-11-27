@@ -1,22 +1,13 @@
 import { Request, Response } from 'express';
 import Joi from 'joi';
 import crypto from 'crypto';
+import ms from 'ms';
 import { getUserByEmail, removeSensitiveUserData } from '../helpers/users.helpers';
-import { createToken, hash } from '../helpers/auth.helpers';
+import { validateCredentials, setJWT, hash } from '../helpers/auth.helpers';
 import db from '../lib/db';
-import config from '../lib/config';
 import logger from '../lib/logger';
-
-export interface BaseUserBody {
-	name: string;
-	email: string;
-}
-
-export interface SignupUserBody extends BaseUserBody {
-	password: string;
-}
-
-export type LoginUserBody = BaseUserBody;
+import keyv from '../lib/keyv';
+import { SignupUserBody } from '../types';
 
 export default {
 	signup: {
@@ -51,7 +42,6 @@ export default {
 
 				// create user
 				const userId = crypto.randomBytes(4).toString('hex');
-				const token = createToken(userId);
 				const user = await db.user.create({
 					data: {
 						id: userId,
@@ -61,7 +51,11 @@ export default {
 					},
 				});
 
-				res.cookie('jwt', token, { httpOnly: true, maxAge: config.auth.expiresIn }); // set jwt cookie
+				// add user to cache for 10 minutes
+				await keyv.set(`cache/user:${user.id}`, user, ms('10m'));
+
+				setJWT(res, userId); // set jwt
+
 				res.status(201).json(removeSensitiveUserData(user));
 			} catch (error) {
 				const uuid = crypto.randomUUID();
@@ -82,13 +76,51 @@ export default {
 		},
 	},
 	login: {
-		post: (req: Request, res: Response) => {
+		post: async (req: Request, res: Response) => {
 			// validate body
-			// check if the user exists (no: 400 Bad Request)
-			// check given credentials (no: 401 Unauthorized)
-			// set cookie
-			// return user
-			// handle errors
+			const schema = Joi.object({
+				email: Joi.string().label('Email').email({ tlds: false }).required(),
+				password: Joi.string().label('Password').max(256).required(),
+			});
+
+			const bodyValidation = schema.validate(req.body).error;
+			if (bodyValidation) return res.status(400).send({ message: bodyValidation.message });
+
+			const { email, password }: SignupUserBody = req.body;
+			try {
+				// check if the user exists
+				const user = await getUserByEmail(email);
+				if (!user) {
+					const response = { message: 'A user with this email does not exist' };
+					return res.status(400).json(response);
+				}
+
+				// add user to cache for 10 minutes
+				await keyv.set(`cache/user:${user.id}`, user, ms('10m'));
+
+				const auth = await validateCredentials(email, password); // check if credentials match
+				if (!auth) {
+					const response = { message: 'The given credentials do not match' };
+					return res.status(401).json(response);
+				}
+				setJWT(res, user.id);
+				res.status(200).json(removeSensitiveUserData(user));
+			} catch (error) {
+				const uuid = crypto.randomUUID();
+
+				logger.warn('Failed to login a new user', {
+					uuid,
+					error,
+					status: 400,
+				});
+
+				res.status(500).json({
+					uuid,
+					message: 'Failed to login a new user',
+				});
+			}
+
+			return 0;
 		},
 	},
 	logout: {
@@ -97,5 +129,4 @@ export default {
 			res.status(200).json({ message: 'You have been logged out' });
 		},
 	},
-	'forgot-password': {},
 };

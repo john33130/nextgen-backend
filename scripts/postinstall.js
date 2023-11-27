@@ -8,11 +8,6 @@ function log(...strings) {
 	console.log(chalk.cyanBright('[POSTINSTALL]'), ...strings);
 }
 
-if (process.env.NODE_ENV !== 'production') {
-	log('Only neccessary in production, skipping');
-	process.exit(0);
-}
-
 /**
  * Run a command via `npx`
  * @param {string} cmd - The command to run
@@ -28,5 +23,7 @@ log('Setting up prisma');
 
 (async () => {
 	await npx('prisma generate');
-	await npx('prisma migrate deploy');
+
+	if (process.env.NODE_ENV === 'production') await npx('prisma migrate deploy');
+	else await npx('prisma migrate dev');
 })();

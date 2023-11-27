@@ -12,6 +12,7 @@ model User {
     createdAt DateTime @default(now())
     name      String   @db.VarChar(64)
     email     String   @unique @db.VarChar(254)
+    inactive  Boolean  @default(false)
     password  String
     device    Device[]
 
