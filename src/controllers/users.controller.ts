@@ -2,9 +2,10 @@ import { Request, Response } from 'express';
 import { User } from '@prisma/client';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
+import ms from 'ms';
 import keyv from '../lib/keyv';
 import db from '../lib/db';
-import { getUserById, removeSensitiveUserData } from '../helpers/users.helpers';
+import { getUserByEmail, getUserById, removeSensitiveUserData } from '../helpers/users.helpers';
 
 export interface ChangeUserBody {
 	update: {
@@ -44,6 +45,7 @@ export default {
 						.messages({
 							'string.pattern.base':
 								'Password must contain one uppercase letter, one lowercase letter, one number and one special character',
+							'string.min': 'Password must be atleast 8 characters long',
 						})
 						.optional(),
 				})
@@ -56,39 +58,48 @@ export default {
 			const bodyValidation = schema.validate(req.body).error;
 			if (bodyValidation) return res.status(400).send({ message: bodyValidation.message });
 
-			const { update, password }: ChangeUserBody = req.body;
-
 			const { userId } = req.params;
+			const { update, password }: ChangeUserBody = req.body;
 			const oldUser = (await getUserById(userId)) as User;
 
-			// make sure values are different
-			if (oldUser.name === update.name)
-				return res.status(200).json({ message: 'Please make sure your new name is different' });
-			if (oldUser.email === update.email)
-				return res
-					.status(200)
-					.json({ message: 'Please make sure your new email is different' });
-			if (await bcrypt.compare(update.password || '', oldUser.password))
-				return res
-					.status(200)
-					.json({ message: 'Please make sure your new password is different' });
+			// check if given values are different
+			Object.entries(update).forEach(async ([k, v]) => {
+				const oldValue = oldUser[k as 'name' | 'email' | 'password'];
+				const validPassword =
+					k === 'password' && (await bcrypt.compare(password, oldUser.password));
+				if (validPassword || oldValue === v) {
+					return res.status(400).json({
+						message: 'Please make sure the value you enter is different',
+						key: k,
+					});
+				}
 
-			// check if valid password is given
-			await bcrypt.compare(password, oldUser.password).then((valid) => {
-				if (!valid) return res.status(401).json({ message: 'Please provide a valid password' });
-				return 0;
+				// check if email is unique
+				if (update.email && !!(await getUserByEmail(update.email))) {
+					return res.status(400).json({ message: 'This email is already in use' });
+				}
+
+				// check if valid password is given
+				const auth = await bcrypt.compare(password, oldUser.password);
+				if (!auth) return res.status(401).json({ message: 'The given password is not valid' });
+
+				// update user
+				const newUser = await db.user.update({
+					where: { id: userId },
+					data: update,
+				});
+
+				// add to cache
+				const cacheKey = `cache/users:${userId}`;
+				await keyv.set(cacheKey, newUser, ms('10m'));
+
+				return res.status(200).json({
+					oldUser: removeSensitiveUserData(oldUser),
+					newUser: removeSensitiveUserData(newUser),
+				});
 			});
 
-			// update user
-			const newUser = await db.user.update({
-				where: { id: userId },
-				data: update,
-			});
-
-			return res.status(200).json({
-				oldUser: removeSensitiveUserData(oldUser),
-				newUser: removeSensitiveUserData(newUser),
-			});
+			return 0;
 		},
-	},
+	}, // alfret@outlook.com
 };

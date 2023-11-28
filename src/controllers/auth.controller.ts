@@ -24,6 +24,7 @@ export default {
 					.messages({
 						'string.pattern.base':
 							'Password must contain one uppercase letter, one lowercase letter, one number and one special character',
+						'string.min': 'Password must be atleast 8 characters',
 					})
 					.required(),
 			});
