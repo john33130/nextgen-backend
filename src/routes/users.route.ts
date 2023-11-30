@@ -1,10 +1,11 @@
 import { Router } from 'express';
-import * as auth from '../middlewares/auth.middleware';
+import { validateToken } from '../middlewares/auth.middleware';
+import { validatePermissionToUser } from '../middlewares/users.middleware';
 import controller from '../controllers/users.controller';
 
 const router = Router();
 
-router.get('/:userId', auth.validateUserId, auth.validateToken, controller[':userId'].get); // get user data
-router.patch('/:userId', auth.validateUserId, auth.validateToken, controller[':userId'].patch); // change user data
+router.get('/:userId/credentials', validatePermissionToUser, validateToken, controller[':userId'].credentials.get); // get user data
+router.patch('/:userId/credentials', validatePermissionToUser, validateToken, controller[':userId'].credentials.patch); // change user data
 
 export default router;

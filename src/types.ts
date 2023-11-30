@@ -1,7 +1,8 @@
 import { TransformableInfo } from 'logform';
 import { Logger } from 'winston';
 
-import { Device, User } from '@prisma/client';
+import { Device, RiskFactor, User } from '@prisma/client';
+import { Decimal } from '@prisma/client/runtime/library';
 
 export interface ConfigOptions {
 	logs: {
@@ -76,3 +77,15 @@ export interface SignupUserBody extends BaseUserBody {
 }
 
 export type LoginUserBody = BaseUserBody;
+
+export interface DeviceMeasurements {
+	updatedAt: Date;
+	ph?: Decimal | null;
+	waterTemperature?: Decimal | null;
+	turbidity?: number | null;
+	risk: RiskFactor;
+}
+
+export type Nullish<T> = {
+	[P in keyof T]?: T[P] | null;
+};

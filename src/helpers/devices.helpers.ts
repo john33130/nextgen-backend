@@ -1,6 +1,8 @@
 import { Device } from '@prisma/client';
-import { SafeDevice } from '../types';
+import ms from 'ms';
+import { DeviceMeasurements, SafeDevice } from '../types';
 import db from '../lib/db';
+import keyv from '../lib/keyv';
 
 /**
  * Delete sensitive data from a device object
@@ -14,10 +16,29 @@ export function removeSensitiveDeviceData(body: Device): SafeDevice {
 
 /**
  * Find a device by searching an id
- * @param id - The id to look for
+ * @param deviceId - The id to look for
  */
-export async function getDeviceById(id: string) {
-	const user = await db.device.findUnique({ where: { id } });
-	if (!user) throw new Error(`No device found with the id "${id}"`);
-	return user;
+export async function getDeviceById(deviceId: string): Promise<Device | null> {
+	const cacheKey = `cache/users:${deviceId}`;
+	let device: Device | null = await keyv.get(cacheKey);
+	if (!device) {
+		device = await db.device.findUnique({ where: { id: deviceId } });
+		await keyv.set(cacheKey, device, ms('30m'));
+	}
+
+	return device;
+}
+
+/**
+ * Extract the measurements from a deviceE
+ * @param device - The device object
+ */
+export function getMeasurements(device: Device): DeviceMeasurements {
+	const data: Partial<DeviceMeasurements> = {};
+	data.ph = device.ph;
+	data.risk = device.risk;
+	data.turbidity = device.turbidity;
+	data.waterTemperature = device.waterTemperature;
+	data.updatedAt = device.updatedAt;
+	return data as DeviceMeasurements;
 }

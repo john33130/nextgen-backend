@@ -13,10 +13,9 @@ export async function getUserById(userId: string): Promise<User | null> {
 	let user: User | null = await keyv.get(cacheKey);
 	if (!user) {
 		user = await db.user.findUnique({ where: { id: userId } });
-		await keyv.set(cacheKey, user, ms('10m'));
+		await keyv.set(cacheKey, user, ms('30m'));
 	}
 
-	if (typeof user === 'string') user = JSON.parse(user);
 	return user;
 }
 
@@ -26,7 +25,7 @@ export async function getUserById(userId: string): Promise<User | null> {
  */
 export async function getUserByEmail(email: string): Promise<User | null> {
 	const user = await db.user.findUnique({ where: { email } });
-	if (user) await keyv.set(`cache/users:${user.id}`, user, ms('10m'));
+	if (user) await keyv.set(`cache/users:${user.id}`, user, ms('30m'));
 	return user;
 }
 

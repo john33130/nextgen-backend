@@ -1,13 +1,26 @@
 import { Router } from 'express';
-import * as auth from '../middlewares/auth.middleware';
+import { validateToken } from '../middlewares/auth.middleware';
+import { validatePermissionToDevice, validateAccessKey } from '../middlewares/devices.middleware';
+import controller from '../controllers/devices.controller';
 
 const router = Router();
 
-router.get('/', auth.validateToken); // get all device information at once (only admins)
-router.get('/measurements'); // get all device measurements at once (public)
-router.get('/:deviceId', auth.validateToken); // get device information (only users and admins)
-router.patch('/:deviceId', auth.validateToken); // change device information (only users and admins)
-router.get('/:deviceId/measurements'); // get device measurements (public)
-router.post('/:deviceId/measurements'); // change device measurements (devices only)
+router.get(
+	'/credentials/:deviceId',
+	validatePermissionToDevice,
+	validateToken,
+	controller.credentials[':deviceId'].get
+);
+
+router.patch(
+	'/credentials/:deviceId',
+	validatePermissionToDevice,
+	validateToken,
+	controller.credentials[':deviceId'].patch
+);
+
+router.get('/measurements/all', controller.measurements.all.get);
+router.get('/measurements/:deviceId', controller.measurements[':deviceId'].get);
+router.post('/measurements/:deviceId', validateAccessKey, controller.measurements[':deviceId'].post);
 
 export default router;

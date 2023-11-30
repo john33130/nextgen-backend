@@ -20,31 +20,22 @@ model User {
 }
 
 model Device {
-    id           String             @id @unique @db.Char(8)
-    createdAt    DateTime           @default(now())
-    name         String
-    emoji        String             @default("🌊")
-    accessKey    String             @db.Char(16)
-    User         User?              @relation(fields: [userId], references: [id])
-    userId       String?            @db.Char(8)
-    coordinates  Json               @default("{\"lat\": \"\", \"long\": \"\"}")
-    measurements DeviceMeasurements @relation(fields: [id], references: [deviceId])
-    batteryLevel Int?
-
-    @@map("devices")
-}
-
-model DeviceMeasurements {
-    deviceId         String     @id @unique @db.Char(8)
-    Device           Device[]
+    id               String     @id @unique @db.Char(8)
+    createdAt        DateTime   @default(now())
+    name             String
+    emoji            String     @default("🌊")
+    accessKey        String     @db.Char(16)
+    User             User?      @relation(fields: [userId], references: [id])
+    userId           String?    @db.Char(8)
+    coordinates      Json       @default("{\"lat\": \"\", \"long\": \"\"}")
+    batteryLevel     Int?
     updatedAt        DateTime   @default(now())
-    tds              Int?
     ph               Decimal?
     waterTemperature Decimal?
     turbidity        Int?
     risk             RiskFactor @default(UNKNOWN)
 
-    @@map("measurements")
+    @@map("devices")
 }
 
 enum RiskFactor {
