@@ -22,7 +22,7 @@ model User {
 model Device {
     id               String     @id @unique @db.Char(8)
     createdAt        DateTime   @default(now())
-    name             String
+    name             String     @db.VarChar(32)
     emoji            String     @default("🌊")
     accessKey        String     @db.Char(16)
     User             User?      @relation(fields: [userId], references: [id])

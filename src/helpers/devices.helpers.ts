@@ -1,8 +1,6 @@
 import { Device } from '@prisma/client';
-import ms from 'ms';
 import { DeviceMeasurements, SafeDevice } from '../types';
 import db from '../lib/db';
-import keyv from '../lib/keyv';
 
 /**
  * Delete sensitive data from a device object
@@ -19,14 +17,7 @@ export function removeSensitiveDeviceData(body: Device): SafeDevice {
  * @param deviceId - The id to look for
  */
 export async function getDeviceById(deviceId: string): Promise<Device | null> {
-	const cacheKey = `cache/users:${deviceId}`;
-	let device: Device | null = await keyv.get(cacheKey);
-	if (!device) {
-		device = await db.device.findUnique({ where: { id: deviceId } });
-		await keyv.set(cacheKey, device, ms('30m'));
-	}
-
-	return device;
+	return db.device.findUnique({ where: { id: deviceId } });
 }
 
 /**

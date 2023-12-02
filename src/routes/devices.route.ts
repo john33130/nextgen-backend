@@ -6,21 +6,20 @@ import controller from '../controllers/devices.controller';
 const router = Router();
 
 router.get(
-	'/credentials/:deviceId',
+	'/:deviceId/credentials',
 	validatePermissionToDevice,
 	validateToken,
-	controller.credentials[':deviceId'].get
+	controller[':deviceId'].credentials.get
 );
 
 router.patch(
-	'/credentials/:deviceId',
+	'/:deviceId/credentials',
 	validatePermissionToDevice,
 	validateToken,
-	controller.credentials[':deviceId'].patch
+	controller[':deviceId'].credentials.patch
 );
 
-router.get('/measurements/all', controller.measurements.all.get);
-router.get('/measurements/:deviceId', controller.measurements[':deviceId'].get);
-router.post('/measurements/:deviceId', validateAccessKey, controller.measurements[':deviceId'].post);
+router.get('/:deviceId/measurements', controller[':deviceId'].measurements.get);
+router.post('/:deviceId/measurements', validateAccessKey, controller[':deviceId'].measurements.post);
 
 export default router;

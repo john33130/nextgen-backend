@@ -1,12 +1,10 @@
 import { Request, Response } from 'express';
 import Joi from 'joi';
 import crypto from 'crypto';
-import ms from 'ms';
 import { getUserByEmail, removeSensitiveUserData } from '../helpers/users.helpers';
 import { validateCredentials, setJWT, hash } from '../helpers/auth.helpers';
 import db from '../lib/db';
 import logger from '../lib/logger';
-import keyv from '../lib/keyv';
 import { SignupUserBody } from '../types';
 
 export default {
@@ -52,9 +50,6 @@ export default {
 					},
 				});
 
-				// add user to cache for 10 minutes
-				await keyv.set(`cache/user:${user.id}`, user, ms('10m'));
-
 				setJWT(res, userId); // set jwt
 
 				res.status(201).json(removeSensitiveUserData(user));
@@ -95,9 +90,6 @@ export default {
 					const response = { message: 'A user with this email does not exist' };
 					return res.status(400).json(response);
 				}
-
-				// add user to cache for 10 minutes
-				await keyv.set(`cache/user:${user.id}`, user, ms('10m'));
 
 				const auth = await validateCredentials(email, password); // check if credentials match
 				if (!auth) {

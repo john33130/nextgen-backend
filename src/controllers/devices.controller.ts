@@ -1,31 +1,29 @@
 import { Request, Response } from 'express';
-import ms from 'ms';
 import crypto from 'crypto';
 import Joi from 'joi';
-import emojiFramework from 'node-emoji';
+import { Device } from '@prisma/client';
+import containsEmoji from 'contains-emoji';
 import db from '../lib/db';
-import { getDeviceById, getMeasurements } from '../helpers/devices.helpers';
-import { DeviceMeasurements } from '../types';
+import { getDeviceById } from '../helpers/devices.helpers';
 import logger from '../lib/logger';
 
-export default {
-	credentials: {
-		':deviceId': {
-			get: async (req: Request, res: Response) => {
-				try {
-					const data: DeviceMeasurements[] = [];
-					(await db.device.findMany({ select: { id: true } })).forEach(async ({ id }) => {
-						const device = await getDeviceById(id); // get device
-						if (!device) return; // check if device exists
-						const measurements = getMeasurements(device); // extract measurements
-						const sendData = !(
-							(Date.now() - measurements.updatedAt.getTime()) /
-							ms('6h')
-						); // was data send in the last 6 hours?
-						if (sendData) data.push(measurements); // puish data
-					});
+export interface UpdateDeviceBody {
+	update: {
+		name?: string;
+		emoji?: string;
+	};
+}
 
-					res.status(200).json(data);
+export default {
+	':deviceId': {
+		credentials: {
+			get: async (req: Request, res: Response) => {
+				const { deviceId } = req.params;
+
+				try {
+					return res
+						.status(200)
+						.json(await db.device.findUnique({ where: { id: deviceId } }));
 				} catch (error) {
 					const uuid = crypto.randomUUID();
 
@@ -40,45 +38,54 @@ export default {
 						message: 'Failed to get all device measurements',
 					});
 				}
+
+				return 0;
 			},
 
-			patch: (req: Request, res: Response) => {
+			patch: async (req: Request, res: Response) => {
 				// validate body
 				const schema = Joi.object({
 					update: Joi.object({
-						name: Joi.string().label('Name').max(48).optional(),
-						emoji: Joi.string().max(2).optional(),
+						name: Joi.string().max(32).optional(),
+						emoji: Joi.string().length(2).optional(),
 					})
 						.min(1)
-						.messages({ 'object.min': 'Atleast one change should be made' }),
+						.required(),
 				});
 
 				const bodyValidation = schema.validate(req.body).error;
 				if (bodyValidation) return res.status(400).send({ message: bodyValidation.message });
 
 				const { deviceId } = req.params;
-				const { update } = req.body;
+				const { update }: UpdateDeviceBody = req.body;
+				const oldDevice = (await getDeviceById(deviceId)) as Device;
+				const oldData = {
+					name: oldDevice.name,
+					emoji: oldDevice.emoji,
+				};
 
-				// check if input is an emoji
-				if (update.emoji && emojiFramework.has(update.emoji)) {
+				// check if emoji field is emoji
+				if (update.emoji && !containsEmoji(update.emoji)) {
 					return res.status(400).json({ message: 'Invalid emoji' });
 				}
 
-				const oldDevice =
-					// check if values are different
-					Object.entries(update).forEach(([k, v]) => {});
+				// check if values have changed
+				if (oldData.name === update.name && oldData.emoji === update.emoji) {
+					return res.status(200).json({ message: 'No new values' });
+				}
 
-				// update device
-				// cache
-				// handle errors
+				const newDevice = await db.device.update({ where: { id: deviceId }, data: update });
+
+				return res.status(200).json({
+					oldDevice: oldData,
+					newDevice: {
+						name: newDevice.name,
+						emoji: newDevice.emoji,
+					},
+				});
 			},
 		},
-	},
-	measurements: {
-		all: {
-			get: (req: Request, res: Response) => {},
-		},
-		':deviceId': {
+		measurements: {
 			get: (req: Request, res: Response) => {},
 			post: (req: Request, res: Response) => {},
 		},

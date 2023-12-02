@@ -86,6 +86,8 @@ export interface DeviceMeasurements {
 	risk: RiskFactor;
 }
 
+export type UserWithOwnDevices = User & { devices: string[] };
+
 export type Nullish<T> = {
 	[P in keyof T]?: T[P] | null;
 };

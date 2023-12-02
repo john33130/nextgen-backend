@@ -1,13 +1,11 @@
 import { Request, Response } from 'express';
-import { User } from '@prisma/client';
 import Joi from 'joi';
 import bcrypt from 'bcrypt';
-import ms from 'ms';
 import crypto from 'crypto';
-import keyv from '../lib/keyv';
 import db from '../lib/db';
 import { getUserByEmail, getUserById, removeSensitiveUserData } from '../helpers/users.helpers';
 import logger from '../lib/logger';
+import { UserWithOwnDevices } from '../types';
 
 export interface ChangeUserBody {
 	update: {
@@ -23,13 +21,7 @@ export default {
 		credentials: {
 			get: async (req: Request, res: Response) => {
 				const { userId } = req.params;
-				const cacheKey = `cache/users:${userId}`;
-				let user: User | undefined;
-				if (!(await keyv.has(cacheKey))) {
-					user = (await db.user.findUnique({ where: { id: userId } })) as User;
-					await keyv.set(cacheKey, JSON.stringify(user));
-				} else user = (await keyv.get(cacheKey)) as User;
-
+				const user = (await getUserById(userId)) as UserWithOwnDevices;
 				res.status(200).json(removeSensitiveUserData(user));
 			},
 			patch: async (req: Request, res: Response) => {
@@ -64,13 +56,14 @@ export default {
 
 				const { userId } = req.params;
 				const { update, password }: ChangeUserBody = req.body;
-				const oldUser = (await getUserById(userId)) as User;
+				const oldUser = (await getUserById(userId)) as UserWithOwnDevices;
 
 				// check if given values are different
 				Object.entries(update).forEach(async ([k, v]) => {
 					const oldValue = oldUser[k as 'name' | 'email' | 'password'];
 					const validPassword =
-						k === 'password' && (await bcrypt.compare(password, oldUser.password));
+						k === 'password' &&
+						(await bcrypt.compare(update.password!, oldUser.password));
 					if (validPassword || oldValue === v) {
 						return res.status(400).json({
 							message: 'Please make sure the value you enter is different',
@@ -98,10 +91,6 @@ export default {
 							where: { id: userId },
 							data: update,
 						});
-
-						// add to cache
-						const cacheKey = `cache/users:${userId}`;
-						await keyv.set(cacheKey, newUser, ms('30m'));
 
 						return res.status(200).json({
 							oldUser: removeSensitiveUserData(oldUser),
