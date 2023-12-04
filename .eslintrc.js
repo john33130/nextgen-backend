@@ -3,6 +3,7 @@ const sharedRules = {
 	'no-param-reassign': 0,
 	'no-plusplus': 0,
 	'import/prefer-default-export': 0,
+	'no-new': 0,
 };
 
 module.exports = {

@@ -22,10 +22,10 @@ export interface ConfigOptions {
 }
 
 export interface CustomLogMethodMetaData {
+	[key: string]: unknown;
 	service?: string;
 	error?: Error;
-	uuid: string;
-	[key: string]: unknown;
+	uuid?: string;
 }
 
 export type CustomLogMethod = (message: string | null, ...meta: CustomLogMethodMetaData[]) => unknown;

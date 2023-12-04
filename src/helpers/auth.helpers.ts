@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import { Response } from 'express';
 import { getUserByEmail } from './users.helpers';
 import config from '../lib/config';
+import nodemailer from '../lib/nodemailer';
 
 /**
  * Check if credentials match the user
@@ -31,4 +32,22 @@ export async function hash(password: string): Promise<string> {
 export function setJWT(res: Response, userId: string) {
 	const token = jwt.sign({ userId }, process.env.ENCRYPTION_KEY!, { expiresIn: config.auth.expiresIn });
 	res.cookie('jwt', token, { httpOnly: true, maxAge: config.auth.expiresIn });
+}
+
+export function sendVerificationEmail(token: string, email: string) {
+	let success = true;
+	const url = `${process.env.BASE_URL}/auth/activate?token=${token}`;
+	nodemailer.sendMail(
+		{
+			from: 'NextGen 🌊 <no.reply.nextgendevs@gmail.com>',
+			to: [email],
+			subject: 'Activate your account',
+			html: `Please verify your account by clicking on the link <a href="${url}">here</a>.`,
+		},
+		(error) => {
+			if (error) success = false;
+		}
+	);
+
+	return success;
 }

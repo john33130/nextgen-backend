@@ -8,13 +8,15 @@ generator client {
 }
 
 model User {
-    id        String   @id @unique @db.Char(8)
-    createdAt DateTime @default(now())
-    name      String   @db.VarChar(64)
-    email     String   @unique @db.VarChar(254)
-    inactive  Boolean  @default(false)
-    password  String
-    device    Device[]
+    id               String    @id @unique @db.Char(8)
+    createdAt        DateTime  @default(now())
+    name             String    @db.VarChar(64)
+    deactivated      Boolean   @default(false)
+    deactivationDate DateTime?
+    email            String    @unique @db.VarChar(254)
+    activated        Boolean   @default(false)
+    password         String
+    device           Device[]
 
     @@map("users")
 }
@@ -24,7 +26,7 @@ model Device {
     createdAt        DateTime   @default(now())
     name             String     @db.VarChar(32)
     emoji            String     @default("🌊")
-    accessKey        String     @db.Char(16)
+    accessKey        String
     User             User?      @relation(fields: [userId], references: [id])
     userId           String?    @db.Char(8)
     coordinates      Json       @default("{\"lat\": \"\", \"long\": \"\"}")

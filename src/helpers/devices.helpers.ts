@@ -9,6 +9,10 @@ import db from '../lib/db';
 export function removeSensitiveDeviceData(body: Device): SafeDevice {
 	const data: Partial<Device> = body;
 	delete data.accessKey;
+	delete data.name;
+	delete data.emoji;
+	delete data.coordinates;
+	delete data.batteryLevel;
 	return data as SafeDevice;
 }
 

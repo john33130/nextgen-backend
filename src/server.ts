@@ -6,11 +6,14 @@ import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
 import compression from 'compression';
 import rateLimit from 'express-rate-limit';
+import { CronJob } from 'cron';
+import dayjs from 'dayjs';
 import logger from './lib/logger';
 import { path } from './lib/fs';
 import config from './lib/config';
 import pkg from './lib/pkg';
 import github from './lib/github';
+import db from './lib/db';
 
 const app = express();
 
@@ -65,6 +68,30 @@ export default async () => {
 			resources: ['/auth', '/users', '/devices'],
 		});
 	});
+
+	// start cron job to delete users
+	new CronJob(
+		'0 0 * * *',
+		async () => {
+			(
+				await db.user.findMany({
+					where: { deactivated: { equals: true } },
+					select: { id: true, deactivationDate: true },
+				})
+			).forEach(async (user) => {
+				// calculate if user should be deleted
+				const targetDate = dayjs(user.deactivationDate);
+				const lastWeekDate = dayjs().subtract(30, 'days');
+				if (targetDate.isBefore(lastWeekDate) || targetDate.isSame(lastWeekDate)) {
+					await db.user.delete({ where: { id: user.id } });
+					logger.info('Deleted a user from the database', {
+						userId: user.id,
+					});
+				}
+			});
+		},
+		null
+	).start();
 
 	const server = http.createServer(app);
 

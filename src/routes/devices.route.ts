@@ -19,6 +19,7 @@ router.patch(
 	controller[':deviceId'].credentials.patch
 );
 
+router.get('/', controller.get);
 router.get('/:deviceId/measurements', controller[':deviceId'].measurements.get);
 router.post('/:deviceId/measurements', validateAccessKey, controller[':deviceId'].measurements.post);
 

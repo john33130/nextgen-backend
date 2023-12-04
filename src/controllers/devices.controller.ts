@@ -4,7 +4,7 @@ import Joi from 'joi';
 import { Device } from '@prisma/client';
 import containsEmoji from 'contains-emoji';
 import db from '../lib/db';
-import { getDeviceById } from '../helpers/devices.helpers';
+import { getDeviceById, removeSensitiveDeviceData } from '../helpers/devices.helpers';
 import logger from '../lib/logger';
 
 export interface UpdateDeviceBody {
@@ -86,8 +86,18 @@ export default {
 			},
 		},
 		measurements: {
-			get: (req: Request, res: Response) => {},
+			get: async (req: Request, res: Response) => {
+				if (!req.params.deviceId) res.status(400).json('No deviceId provided');
+				const measurements = await db.device.findUnique({ where: { id: req.params.deviceId } });
+				if (!measurements) return res.status(400).json({ message: 'Invalid deviceId' });
+				return res.status(200).json(removeSensitiveDeviceData(measurements));
+			},
 			post: (req: Request, res: Response) => {},
 		},
+	},
+
+	get: async (req: Request, res: Response) => {
+		const devices = await db.device.findMany({ select: { id: true } });
+		res.status(200).json(devices);
 	},
 };

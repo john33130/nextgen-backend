@@ -17,8 +17,11 @@ const env = {
 	DB_CONNECTION_URL: '',
 	HTTP_PORT: 8000,
 	HTTP_HOST: '0.0.0.0',
+	BASE_URL: '',
 	ENCRYPTION_KEY: randomBytes(24).toString('hex'),
-	NODE_ENV: 'production',
+	NODE_ENV: process.env.NODE_ENV || 'development',
+	MAIL_USER: '',
+	MAIL_PASSWORD: '',
 };
 
 if (!process.env.ENCRYPTION_KEY && !fs.existsSync('./.env')) {
